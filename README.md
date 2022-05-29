@@ -1,3 +1,3 @@
 # simple_socket
-http client to get hTML element from server
+http client to get HTML element from server
 usage? ./tcp <ipaddr>
