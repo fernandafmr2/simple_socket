@@ -15,16 +15,12 @@ void err_die(const char *fmt, ...);
 int main(int argc, char **argv)
 {
 	static const char http_payload[] = "GET / HTTP/1.1\r\n\r\n";
-	int  		sockfd,err;
-	size_t  	sendbytes;
-	ssize_t		ret;
+	int  			sockfd,err;
+	size_t  		sendbytes;
+	ssize_t			ret;
 	struct sockaddr_in  	serveraddr;
-	const char * 	sendline;
-	char 		recvline[4096];
-	
-	if (argc != 2)
-		//einval
-		err_die("usage: %s <server addr>", argv[0]);
+	const char* 	sendline;
+	char 			recvline[4096];
 
 	// SOCK_STREAM = use tcp
 	// SOCK_DGRAM = use udp
@@ -35,13 +31,13 @@ int main(int argc, char **argv)
 	serveraddr.sin_family 	= AF_INET;
 	serveraddr.sin_port		= htons(SERVER_PORT); // host network, short
 	
-	if(inet_pton(AF_INET, argv[1], &serveraddr.sin_addr) <= 0){
+	if ( inet_pton(AF_INET, argv[1], &serveraddr.sin_addr) <= 0) {
 		close(sockfd);
 		err_die("inet_pton err for %s ", argv[1]);
 	}
 
 	// connect server
-	if(connect(sockfd, (struct sockaddr *) &serveraddr, sizeof(serveraddr)) < 0){
+	if (connect(sockfd, (struct sockaddr *) &serveraddr, sizeof(serveraddr)) < 0) {
 		close(sockfd);
 		err_die("connect failed");		
 	}
@@ -52,7 +48,7 @@ int main(int argc, char **argv)
 	// send req
 write_:
 	ret = write(sockfd, sendline, sendbytes);
-	if(ret<=0){
+	if (ret <= 0) {
 		if(ret == 0) {
 			puts("server error while send data");
 			close(sockfd);
@@ -60,7 +56,7 @@ write_:
 		}
 
 		err = errno;
-		if(err==EINTR) // write interupt
+		if(err == EINTR) // write interupt
 			goto write_;
 
 		err_die("write err");
@@ -70,7 +66,7 @@ write_:
 
 	// short write handling
 	sendbytes -= (size_t)ret;
-	if(sendbytes>0){
+	if (sendbytes > 0) {
 		// short write handle
 		sendline += (size_t)ret;
 		goto write_;
