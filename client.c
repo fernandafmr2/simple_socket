@@ -10,21 +10,21 @@
 // http port
 #define SERVER_PORT 80
 
-// buffer data
-#define MAXLINE 4096
-
 void err_die(const char *fmt, ...);
 
 int main(int argc, char **argv)
 {
-	if (argc != 2)
-		err_die("usage: %s <server addr>", argv[0]);
-
-	int  		sockfd, n;
+	static const char http_payload[] = "GET / HTTP/1.1\r\n\r\n";
+	int  		sockfd,err;
 	size_t  	sendbytes;
+	ssize_t		ret;
 	struct sockaddr_in  	serveraddr;
-	char 		sendline[MAXLINE];
-	char 		recvline[MAXLINE];
+	const char * 	sendline;
+	char 		recvline[4096];
+	
+	if (argc != 2)
+		//einval
+		err_die("usage: %s <server addr>", argv[0]);
 
 	// SOCK_STREAM = use tcp
 	// SOCK_DGRAM = use udp
@@ -46,25 +46,56 @@ int main(int argc, char **argv)
 		err_die("connect failed");		
 	}
 
-	sprintf(sendline, "GET / HTTP/1.1\r\n\r\n");
-	sendbytes = strlen(sendline);
+	sendline=http_payload;
+	sendbytes = strlen(http_payload);
 
 	// send req
-	if(write(sockfd, sendline, sendbytes) < 0)
+write_:
+	ret = write(sockfd, sendline, sendbytes);
+	if(ret<=0){
+		if(ret == 0) {
+			puts("server error while send data");
+			close(sockfd);
+			return ENETDOWN;
+		}
+
+		err = errno;
+		if(err==EINTR) // write interupt
+			goto write_;
+
 		err_die("write err");
-
-	// receive response
-	memset(recvline, 0, MAXLINE);
-	while((n = read(sockfd, recvline, MAXLINE-1)) > 0)
-	{
-		recvline[n] = 0x00;
-		printf("block read: \n<%s>\n", recvline);
+		close(sockfd);
+		return err;
 	}
-	if(n<0)
-		err_die("read error");
 
-	close(sockfd);
-	exit(0);
+	// short write handling
+	sendbytes -= (size_t)ret;
+	if(sendbytes>0){
+		// short write handle
+		sendline += (size_t)ret;
+		goto write_;
+	}
+
+read_:
+	ret = read(sockfd, recvline, sizeof(recvline)-1);
+	if (ret < 0) {
+		err_die("read");
+		close(sockfd);
+		return ret;
+	}
+
+	if (ret == 0) {
+		/*
+		 * EOF selesai
+		 */
+		close(sockfd);
+		return 0;
+	}
+
+	/* set null terminating for safe print*/
+	recvline[ret] = '\0';
+	printf("%s", recvline);
+	goto read_;
 }
 
 void err_die(const char *fmt, ...)
